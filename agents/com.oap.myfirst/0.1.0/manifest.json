@@ -1,0 +1,31 @@
+{
+  "oap_version": "0.2",
+  "agent_id": "com.oap.myfirst",
+  "name": "My First Agent",
+  "description": "Describe what this agent does.",
+  "author": {
+    "name": "Anonymous",
+    "contact": "n/a"
+  },
+  "runtime_compatibility": {
+    "models_supported": [
+      "openai:gpt-5"
+    ]
+  },
+  "permissions": [
+    "notifications.send"
+  ],
+  "tools": [
+    "tools.mock_echo"
+  ],
+  "memory": {
+    "enabled": true,
+    "scope": "per_user"
+  },
+  "triggers": {
+    "manual": true,
+    "scheduled": [],
+    "events": []
+  },
+  "version": "0.1.0"
+}

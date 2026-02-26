@@ -1,0 +1,43 @@
+{
+  "registry_version": "0.1",
+  "generated_at": "2026-02-26T19:43:13.126Z",
+  "agents": [
+    {
+      "agent_id": "com.oap.myfirst",
+      "name": "My First Agent",
+      "description": "Describe what this agent does.",
+      "publisher": {
+        "display_name": "Anonymous",
+        "publisher_id": "pub_anon_001",
+        "public_key_ed25519": "BASE64..."
+      },
+      "latest_version": "0.1.0",
+      "versions": {
+        "0.1.0": {
+          "package": {
+            "filename": "com.oap.myfirst-0.1.0.oap",
+            "sha256": "94f33957178fecfd3161887991296b707f3550543377df1337b653f0def92b57",
+            "size_bytes": 719,
+            "download_url": "packages/com.oap.myfirst-0.1.0.oap"
+          },
+          "manifest": {
+            "oap_version": "0.2",
+            "agent_id": "com.oap.myfirst",
+            "version": "0.1.0",
+            "permissions": [
+              "notifications.send"
+            ],
+            "tools": [
+              "tools.mock_echo"
+            ]
+          },
+          "signature": {
+            "alg": "ed25519",
+            "signed_at": "2026-02-26T19:43:13.126Z",
+            "signature": "TBD"
+          }
+        }
+      }
+    }
+  ]
+}

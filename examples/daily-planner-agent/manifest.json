@@ -1,0 +1,25 @@
+{
+  "oap_version": "0.2",
+  "agent_id": "com.oap.dailyplanner",
+  "name": "Daily Planner Agent",
+  "description": "Helps users organize daily schedules.",
+  "author": {
+    "name": "OAP Example",
+    "contact": "n/a"
+  },
+  "runtime_compatibility": {
+    "models_supported": ["openai:gpt-5", "local:llama3"]
+  },
+  "permissions": ["calendar.read", "calendar.write", "notifications.send"],
+  "tools": ["tools.mock_echo"],
+  "memory": {
+    "enabled": true,
+    "scope": "per_user"
+  },
+  "triggers": {
+    "manual": true,
+    "scheduled": [],
+    "events": []
+  },
+  "version": "0.1.0"
+}
