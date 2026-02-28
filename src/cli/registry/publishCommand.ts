@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import archiver from "archiver";
 
+import { loadOrCreatePublisher, signPayloadEd25519 } from "../../crypto/signing";
 import { loadAgent } from "../../agent/loadAgent";
 import { validateManifest } from "../../manifest/validateManifest";
 
@@ -77,19 +78,26 @@ export async function publishCommand(argv: string[]) {
     process.exit(1);
   }
 
+  // Ensure registry folders exist
   const { packagesDir, indexPath, abs } = ensureRegistryDirs(registryDir);
 
+  // Pack agent into .oap
   const filename = `${safeFileName(agentId)}-${safeFileName(version)}.oap`;
   const outFile = path.join(packagesDir, filename);
 
   await packToFile(agentPath, outFile);
 
+  // Compute package integrity
   const sha256 = sha256FileHex(outFile);
   const size = fileSizeBytes(outFile);
 
-  // Update registry index
+  // Read registry index
   const idx = readRegistryIndex(indexPath);
 
+  // Load (or create) publisher identity (stored locally in ~/.oap/publisher.json)
+  const publisher = loadOrCreatePublisher();
+
+  // Upsert agent entry
   let agentEntry = idx.agents.find((a) => a.agent_id === agentId);
   if (!agentEntry) {
     agentEntry = {
@@ -97,8 +105,9 @@ export async function publishCommand(argv: string[]) {
       name,
       description,
       publisher: {
-        display_name: "Anonymous",
-        publisher_id: "pub_anon_001",
+        display_name: publisher.display_name,
+        publisher_id: publisher.publisher_id,
+        public_key_ed25519: publisher.public_key_ed25519,
       },
       latest_version: version,
       versions: {},
@@ -108,8 +117,40 @@ export async function publishCommand(argv: string[]) {
     // Keep name/description updated
     agentEntry.name = name;
     agentEntry.description = description;
+
+    // Ensure publisher exists + has public key
+    agentEntry.publisher = {
+      display_name: publisher.display_name,
+      publisher_id: publisher.publisher_id,
+      public_key_ed25519: publisher.public_key_ed25519,
+    };
   }
 
+  // Manifest snapshot stored in index
+  const manifestSnapshot = {
+    oap_version: oapVersion,
+    agent_id: agentId,
+    version,
+    permissions,
+    tools,
+  };
+
+  // Sign payload (OAP Registry v0.1, Trust v0.2 draft)
+  const signedAt = new Date().toISOString();
+  const signingPayload = {
+    agent_id: agentId,
+    version,
+    package_sha256: sha256,
+    manifest: manifestSnapshot,
+    signed_at: signedAt,
+  };
+
+  const { signatureBase64, payloadSha256 } = signPayloadEd25519(
+    signingPayload,
+    publisher.private_key_ed25519
+  );
+
+  // Write version entry
   agentEntry.versions[version] = {
     package: {
       filename,
@@ -117,28 +158,27 @@ export async function publishCommand(argv: string[]) {
       size_bytes: size,
       download_url: `packages/${filename}`, // local-mode relative
     },
-    manifest: {
-      oap_version: oapVersion,
-      agent_id: agentId,
-      version,
-      permissions,
-      tools,
-    },
-    // signature placeholder for v0.2
+    manifest: manifestSnapshot,
     signature: {
       alg: "ed25519",
-      signed_at: new Date().toISOString(),
-      signature: "TBD"
-    }
+      signed_at: signedAt,
+      payload_sha256: payloadSha256,
+      signature: signatureBase64,
+    },
   };
 
-  // Update latest_version (simple: lex compare; later: semver)
+  // Update latest_version (simple lex compare; later: semver)
   agentEntry.latest_version = Object.keys(agentEntry.versions).sort().slice(-1)[0];
 
+  // Update registry metadata
+  idx.generated_at = new Date().toISOString();
+
+  // Persist
   writeRegistryIndex(indexPath, idx);
 
   console.log("✅ Published to registry:");
   console.log(`- Registry: ${abs}`);
   console.log(`- Package:  ${outFile}`);
   console.log(`- SHA256:   ${sha256}`);
+  console.log(`- Signed:   ed25519 (${publisher.publisher_id})`);
 }

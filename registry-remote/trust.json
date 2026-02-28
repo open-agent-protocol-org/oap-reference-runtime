@@ -1,0 +1,16 @@
+{
+  "trust_version": "0.1",
+  "generated_at": "2026-02-28T00:00:00.000Z",
+  "policy": {
+    "default_install": "allow_with_warning",
+    "require_trusted_for_permissions": [
+      "calendar.write",
+      "payments.charge",
+      "filesystem.write"
+    ]
+  },
+  "allowlist_publishers": [
+    "pub_226793e113b3b455"
+  ],
+  "denylist_publishers": []
+}

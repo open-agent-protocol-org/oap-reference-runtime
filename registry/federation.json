@@ -1,0 +1,31 @@
+{
+  "federation_version": "0.1",
+
+  "node": {
+    "name": "OAP Main Registry",
+    "url": "http://localhost:8788",
+    "description": "Primary local OAP registry node",
+    "public": true
+  },
+
+  "follow": [
+    {
+      "name": "Remote Registry",
+      "url": "http://localhost:8790",
+      "trust_level": "neutral",
+      "enabled": true,
+      "sync": {
+        "fetch_index": true,
+        "fetch_publishers": false,
+        "timeout_ms": 2500
+      }
+    }
+  ],
+
+  "policy": {
+    "include_external_in_search": true,
+    "allow_duplicate_agent_ids": false,
+    "merge_strategy": "separate", 
+    "max_follow_nodes": 10
+  }
+}

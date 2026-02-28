@@ -35,6 +35,7 @@ export type RegistryAgentVersionEntry = {
   signature?: {
     alg: "ed25519";
     signed_at: string;
+    payload_sha256?: string;
     signature: string; // placeholder for v0.2
   };
 };

@@ -13,7 +13,7 @@
     ]
   },
   "permissions": [
-    "notifications.send"
+    "calendar.write"
   ],
   "tools": [
     "tools.mock_echo"

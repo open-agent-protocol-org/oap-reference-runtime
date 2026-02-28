@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
+    "registry": "node registry/server.js",
     "start": "node dist/cli.js"
+  
   },
   "keywords": [
     "oap",
