@@ -5,6 +5,8 @@ import archiver from "archiver";
 import { loadOrCreatePublisher, signPayloadEd25519 } from "../../crypto/signing";
 import { loadAgent } from "../../agent/loadAgent";
 import { validateManifest } from "../../manifest/validateManifest";
+import { canonicalJsonBytes } from "../../transparency/canonical";
+import { sha256Hex } from "../../transparency/hash";
 
 import {
   ensureRegistryDirs,
@@ -175,6 +177,46 @@ export async function publishCommand(argv: string[]) {
 
   // Persist
   writeRegistryIndex(indexPath, idx);
+
+  // ---- Transparency log ----
+  const DEV = process.env.OAP_DEV_MODE === "1";
+  const logId = process.env.OAP_LOG_ID ?? `local:${abs}`;
+  const sourceRegistry = `file://${abs}`;
+  const manifestSha256 = sha256Hex(canonicalJsonBytes(manifestSnapshot as any));
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { appendPublishToLog } = require("../../../registry/transparency") as {
+      appendPublishToLog: (args: any) => any;
+    };
+    appendPublishToLog({
+      logId,
+      sourceRegistry,
+      event: {
+        publisher_id: publisher.publisher_id,
+        agent_id: agentId,
+        version,
+        manifest_sha256: manifestSha256,
+        package_sha256: sha256,
+        published_at: new Date().toISOString(),
+      },
+      publisher_signature: {
+        alg: "ed25519",
+        signed_at: signedAt,
+        payload_sha256: payloadSha256,
+        signature: signatureBase64,
+        public_key_ed25519: publisher.public_key_ed25519,
+      },
+    });
+    console.log("✅ Transparency: appended publish event + checkpoint updated");
+  } catch (err: any) {
+    if (DEV) {
+      console.warn(`⚠ Transparency log not updated (dev mode): ${err?.message ?? err}`);
+    } else {
+      console.error("❌ Publish failed: transparency log signing keys missing");
+      process.exit(1);
+    }
+  }
 
   console.log("✅ Published to registry:");
   console.log(`- Registry: ${abs}`);
