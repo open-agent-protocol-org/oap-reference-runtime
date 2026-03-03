@@ -1,6 +1,7 @@
 // registry/server.js
 // OAP Registry HTTP Server (index + trust + publisher profiles + packages + reputation + federation v0.1)
 
+const { readCheckpoint, readEntries } = require("./transparency");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -20,6 +21,7 @@ function sendJson(res, status, obj) {
   });
   res.end(JSON.stringify(obj, null, 2));
 }
+
 
 function sendFile(res, filePath, contentType) {
   if (!fs.existsSync(filePath)) {
@@ -183,6 +185,9 @@ const server = http.createServer(async (req, res) => {
           "/federated-index.json",
           "/publisher/<publisher_id>.json",
           "/packages/<file>.oap",
+          "/transparency/head",
+          "/transparency/entries",
+          "/transparency/public-key",
         ],
       });
       return;
@@ -350,6 +355,56 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ======================
+    // TRANSPARENCY
+    // ======================
+    const DEV = process.env.OAP_DEV_MODE === "1";
+    const LOG_NOT_INIT = {
+      error: "Transparency log not initialized",
+      hint: "Set OAP_LOG_PUBLIC_KEY_B64 and OAP_LOG_SECRET_KEY_B64 or enable dev mode (OAP_DEV_MODE=1)",
+    };
+
+    if (pathname === "/transparency/head") {
+      const checkpoint = readCheckpoint();
+      if (checkpoint === null) {
+        if (DEV) {
+          sendJson(res, 200, { dev_mode: true, checkpoint: null });
+        } else {
+          sendJson(res, 503, LOG_NOT_INIT);
+        }
+        return;
+      }
+      sendJson(res, 200, checkpoint);
+      return;
+    }
+
+    if (pathname === "/transparency/entries") {
+      const from = Math.max(0, Number(parsed.query.from) || 0);
+      const limit = Math.max(1, Math.min(1000, Number(parsed.query.limit) || 200));
+      const entries = readEntries(from, limit);
+      const checkpoint = readCheckpoint();
+      if (checkpoint === null && entries.length === 0) {
+        if (DEV) {
+          sendJson(res, 200, { from, limit, entries });
+        } else {
+          sendJson(res, 503, LOG_NOT_INIT);
+        }
+        return;
+      }
+      sendJson(res, 200, { from, limit, entries });
+      return;
+    }
+
+    if (pathname === "/transparency/public-key") {
+      const pub = process.env.OAP_LOG_PUBLIC_KEY_B64;
+      if (!pub) {
+        sendJson(res, 404, { error: "OAP_LOG_PUBLIC_KEY_B64 not set" });
+        return;
+      }
+      sendJson(res, 200, { public_key_b64: pub });
+      return;
+    }
+
+    // ======================
     // FALLBACK
     // ======================
     sendJson(res, 404, { error: "Unknown endpoint", path: pathname });
@@ -371,4 +426,8 @@ server.listen(PORT, "::", () => {
   console.log(`- Fed Index:    http://localhost:${PORT}/federated-index.json`);
   console.log(`- Publisher:    http://localhost:${PORT}/publisher/<publisher_id>.json`);
   console.log(`- Packages:     http://localhost:${PORT}/packages/<file>.oap`);
+  console.log(`- T-Head:       http://localhost:${PORT}/transparency/head`);
+  console.log(`- T-Entries:    http://localhost:${PORT}/transparency/entries`);
+  console.log(`- T-PubKey:     http://localhost:${PORT}/transparency/public-key`);
+  
 });

@@ -9,6 +9,7 @@ import { agentsCommand } from "./cli/agentsCommand";
 import { publishCommand } from "./cli/registry/publishCommand";
 import { searchCommand } from "./cli/registry/searchCommand";
 import { installCommand } from "./cli/registry/installCommand";
+import { verifyCommand } from "./cli/registry/verifyCommand";
 
 import { loadAgent } from "./agent/loadAgent";
 import { validateManifest } from "./manifest/validateManifest";
@@ -40,6 +41,7 @@ Usage:
   oap publish --agent <path> --registry <path|url>                 Publish agent to a registry (local mode)
   oap search --registry <path|url> <query>                         Search registry
   oap install --registry <path|url> --id <agent_id> --version <v>  Install from registry to local store
+  oap verify --registry <path|url> --id <agent_id> --version <v>   Verify agent package hash + transparency log
 
   oap publisher init                                               Initialize publisher identity (creates keys)
   oap publisher show                                               Show publisher identity
@@ -191,6 +193,10 @@ async function main() {
 
       case "install":
         await installCommand(argv);
+        return;
+
+      case "verify":
+        await verifyCommand(argv);
         return;
 
       case "publisher": {
